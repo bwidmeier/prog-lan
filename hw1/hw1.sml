@@ -73,12 +73,11 @@ fun month_range (day1 : int, day2 : int) =
 fun oldest (dates : (int * int * int) list) =
     if null dates
     then NONE
-    else 
-	let
+    else let
 	    val oldest_of_rest = oldest(tl dates)
 	    val head = hd dates
 	in
-	    if isSome oldest_of_rest andalso is_older(valOf oldest_of_rest, head)
+	    if isSome(oldest_of_rest) andalso is_older(valOf(oldest_of_rest), head)
 	    then oldest_of_rest
 	    else SOME(head)
 	end
@@ -98,37 +97,29 @@ fun reverse (source : int list) =
 	    else helper((hd source) :: acc, tl source)
     in
 	helper([], source)
-    end
+    end	    
 
-fun distinct (source : int list) =
-    let
-	fun helper(acc : int list, source : int list) =
-	    if null source 
-	    then source
-	    else if not(contains(acc, hd source))
-	    then helper((hd source) :: acc, tl source)
-	    else helper(acc, tl source)
+fun distinct (source : int list) = 
+    let fun helper(source : int list, acc : int list) =    
+	    if null source
+	    then acc
+	    else let 
+		val tail = tl source
+		val head = hd source
+	    in
+		if contains(acc, head)
+		then helper(tail, acc)
+		else helper(tail, head :: acc)
+	    end
     in
-	reverse(helper([], source))
-    end
-
-fun distinct2 (source : int list) = 
-    if null source
-    then source
-    else let 
-	val rest = distinct2(tl source)
-	val head = hd source
-    in
-	if contains(rest, head)
-	then rest
-	else head :: rest
+	reverse(helper(source, []))
     end
 
 fun number_in_months_challenge (source : (int * int * int) list, months : int list) =
-    number_in_months(source, distinct2(months))
+    number_in_months(source, distinct(months))
 
 fun dates_in_months_challenge (source : (int * int * int) list, months : int list) =
-    dates_in_months(source, distinct2(months))
+    dates_in_months(source, distinct(months))
 
 fun get_max_day_for_month_year (month : int, year : int) = 
     if month = 2 andalso (year mod 400 = 0 orelse (year mod 4 = 0 andalso year mod 100 <> 0))
