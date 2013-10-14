@@ -1,8 +1,8 @@
 fun is_older (date1 : int * int * int, date2 : int * int * int) =
-    if #1 date1 > #1 date2
-    then false
-    else if #2 date1 > #2 date2
-    then false
+    if #1 date1 <> #1 date2
+    then #1 date1 < #1 date2
+    else if #2 date1 <> #2 date2
+    then #2 date1 < #2 date2
     else #3 date1 < #3 date2
 
 fun number_in_month (dates : (int * int * int) list, month : int) =
@@ -74,13 +74,13 @@ fun oldest (dates : (int * int * int) list) =
     if null dates
     then NONE
     else let
-	    val oldest_of_rest = oldest(tl dates)
-	    val head = hd dates
-	in
-	    if isSome(oldest_of_rest) andalso is_older(valOf(oldest_of_rest), head)
-	    then oldest_of_rest
-	    else SOME(head)
-	end
+	val oldest_of_rest = oldest(tl dates)
+	val head = hd dates
+    in
+	if isSome(oldest_of_rest) andalso is_older(valOf(oldest_of_rest), head)
+	then oldest_of_rest
+	else SOME(head)
+    end
 
 fun contains (source : int list, elem : int) =
     if null source
@@ -131,7 +131,8 @@ fun reasonable_date (date : (int * int * int)) =
 	val year = #1 date
 	val month = #2 date
 	val day = #3 date
-	val max_day = get_max_day_for_month_year(month, year)
     in
-	year >= 1 andalso month >= 1 andalso month <= 12 andalso day >= 0 andalso day <= max_day
+	if year >= 1 andalso month >= 1 andalso month <= 12 andalso day >= 0 
+	then day <= get_max_day_for_month_year(month, year)
+	else false
     end
