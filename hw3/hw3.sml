@@ -35,3 +35,52 @@ datatype typ = Anything
 	     | Datatype of string
 
 (**** you can put all your code here ****)
+
+fun only_capitals xs = 
+    List.filter (fn s => (Char.isUpper(String.sub(s, 0)))) xs
+
+fun longest_string1 xs =
+    foldl (fn (curr, acc) => if String.size(curr) > String.size(acc) then curr else acc) "" xs
+
+fun longest_string2 xs =
+    foldl (fn (curr, acc) => if String.size(curr) >= String.size(acc) then curr else acc) "" xs
+
+fun longest_string_helper comparer xs =
+    foldl (fn (curr, acc) => if comparer(String.size(curr), String.size(acc)) then curr else acc) "" xs
+
+fun longest_string3 xs =
+    let 
+	val aux = longest_string_helper (fn (curr, acc) => curr > acc)
+    in
+	aux(xs)
+    end
+
+fun longest_string4 xs =
+    let 
+	val aux = longest_string_helper (fn (curr, acc) => curr >= acc)
+    in
+	aux(xs)
+    end
+
+fun longest_capitalized xs =
+    (longest_string2 o only_capitals) xs
+
+fun rev_string s =
+    (String.implode o rev o String.explode) s
+
+fun first_answer f xs =
+    case map f xs of
+	[] => raise NoAnswer
+      | SOME x :: _ => x
+      | NONE :: xs => first_answer f xs
+				   
+fun all_answers f xs =
+    let
+	fun aux rest acc =
+	    case rest of
+		[] => SOME acc
+	      | SOME x :: xs => aux xs (acc @ x)
+	      | NONE :: _ => NONE
+    in
+	aux (map f xs) []
+    end
