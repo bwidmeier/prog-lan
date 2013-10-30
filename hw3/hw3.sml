@@ -63,16 +63,21 @@ fun longest_string4 xs =
     end
 
 fun longest_capitalized xs =
-    (longest_string2 o only_capitals) xs
+    (longest_string1 o only_capitals) xs
 
 fun rev_string s =
     (String.implode o rev o String.explode) s
 
 fun first_answer f xs =
-    case map f xs of
-	[] => raise NoAnswer
-      | SOME x :: _ => x
-      | NONE :: xs => first_answer f xs
+    let
+	fun aux xs =    
+	    case xs of
+		[] => raise NoAnswer
+	      | SOME x :: _ => x
+	      | NONE :: xs => aux xs
+    in
+	aux (map f xs)
+    end
 				   
 fun all_answers f xs =
     let
@@ -84,3 +89,46 @@ fun all_answers f xs =
     in
 	aux (map f xs) []
     end
+
+fun count_wildcards p =
+    g (fn () => 1) (fn s => 0) p
+
+fun count_wild_and_variable_lengths p =
+    g (fn () => 1) (fn s => String.size s) p
+
+fun count_some_var (s, p) =
+    g (fn () => 0) (fn s' => if s' = s then 1 else 0) p
+
+fun check_pat p =
+    let
+	fun get_var_names p =
+	    case p of
+		Wildcard => []
+	      | UnitP => []
+	      | ConstP _ => []
+	      | ConstructorP(_, p) => get_var_names p
+	      | TupleP(ps) => foldl (fn (p, vs) => vs @ get_var_names p) [] ps
+	      | Variable s => [s]
+	
+	fun has_repeats vs =
+	    case vs of
+		[] => false
+	      | v :: vs => (List.exists (fn v' => v' = v) vs) orelse (has_repeats vs)
+    in
+	(not o has_repeats o get_var_names) p
+    end
+
+fun match (v, p) =
+    case (v, p) of
+	(_, Wildcard) => SOME []
+      | (Unit, UnitP) => SOME []
+      | (Const v, ConstP p) => if p = v then SOME [] else NONE
+      | (Constructor(s, v), ConstructorP(s', p)) => if s = s' then match(v, p) else NONE
+      | (Tuple(vs), TupleP(ps)) => if List.length(ps) = List.length(vs) 
+				   then all_answers (fn (p, v) => match(v, p)) (ListPair.zip (ps, vs))
+				   else NONE
+      | (v, Variable name) => SOME [(name, v)] 
+      | _ => NONE
+
+fun first_match v ps =
+     SOME (first_answer (fn p => match(v, p)) ps) handle NoAnswer => NONE
