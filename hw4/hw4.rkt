@@ -48,9 +48,9 @@
   (letrec 
       ([l (vector-length vec)]
        [aux (lambda (n) (if (>= n l) #f 
-                            (let ([elem (vector-ref vec n)]) 
-                              (if 
-                               (and (pair? elem) (equal? (car elem) v)) 
+                            (let 
+                                ([elem (vector-ref vec n)]) 
+                              (if (and (pair? elem) (equal? (car elem) v)) 
                                elem 
                                (aux (+ n 1))))))])
     (aux 0)))
