@@ -69,8 +69,8 @@
     [(fun? e)
      (let ([name (fun-nameopt e)])
        (if name
-           (closure e (cons (cons name e) env))
-           (closure e env)))]
+           (closure (cons (cons name e) env) e)
+           (closure env e)))]
     ;; ifgreater
     [(ifgreater? e)
      (let ([e1 (eval-under-env (ifgreater-e1 e) env)]
@@ -101,13 +101,13 @@
     [(apair? e) (apair (eval-under-env (apair-e1 e) env) (eval-under-env (apair-e2 e) env))]
     ;; fst
     [(fst? e)
-     (let ([pr (eval-under-env e env)])
+     (let ([pr (eval-under-env (fst-e e) env)])
        (if (apair? pr)
            (apair-e1 pr)
            (error "fst requires an argument of type apair")))]
     ;; snd
     [(snd? e)
-     (let ([pr (eval-under-env e env)])
+     (let ([pr (eval-under-env (snd-e e) env)])
        (if (apair? pr)
            (apair-e2 pr)
            (error "fst requires an argument of type apair")))]
@@ -148,12 +148,12 @@
 
 (define mupl-map 
   (fun #f "fn" 
-       (fun "map" "xs" 
+       (fun "mapfn" "xs"
             (ifeq (isaunit (var "xs")) (int 1) 
                   (aunit) 
                   (apair 
                    (call (var "fn") (fst (var "xs"))) 
-                   (call (var "map") (snd (var "xs"))))))))
+                   (call (var "mapfn") (snd (var "xs"))))))))
 
 (define mupl-mapAddN 
   (mlet "map" mupl-map
