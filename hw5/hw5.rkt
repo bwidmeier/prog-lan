@@ -22,7 +22,16 @@
 
 ;; Problem 1
 
-;; CHANGE (put your solutions here)
+(define (racketlist->mupllist xs)
+  (if (null? xs) 
+      (aunit)
+      (apair (car xs) (racketlist->mupllist (cdr xs)))))
+
+(define (mupllist->racketlist e)
+  (if (aunit? e)
+      null
+      (cons (apair-e1 e) (mupllist->racketlist (apair-e2 e)))))
+
 
 ;; Problem 2
 
@@ -38,23 +47,82 @@
 ;; We will test eval-under-env by calling it directly even though
 ;; "in real life" it would be a helper function of eval-exp.
 (define (eval-under-env e env)
-  (cond [(var? e) 
-         (envlookup env (var-string e))]
-        [(add? e) 
-         (let ([v1 (eval-under-env (add-e1 e) env)]
-               [v2 (eval-under-env (add-e2 e) env)])
-           (if (and (int? v1)
-                    (int? v2))
-               (int (+ (int-num v1) 
-                       (int-num v2)))
-               (error "MUPL addition applied to non-number")))]
-        ;; CHANGE add more cases here
-        [#t (error (format "bad MUPL expression: ~v" e))]))
+  (cond
+    ;; int
+    [(int? e) e]
+    ;; unit
+    [(aunit? e) e]
+    ;; closure
+    [(closure? e) e]
+    ;; variable use
+    [(var? e) (envlookup env (var-string e))]
+    ;; addition
+    [(add? e) 
+     (let ([v1 (eval-under-env (add-e1 e) env)]
+           [v2 (eval-under-env (add-e2 e) env)])
+       (if (and (int? v1)
+                (int? v2))
+           (int (+ (int-num v1) 
+                   (int-num v2)))
+           (error "MUPL addition applied to non-number")))]
+    ;; function definition
+    [(fun? e)
+     (let ([name (fun-nameopt e)])
+       (if name
+           (closure e (cons (cons name e) env))
+           (closure e env)))]
+    ;; ifgreater
+    [(ifgreater? e)
+     (let ([e1 (eval-under-env (ifgreater-e1 e))]
+           [e2 (eval-under-env (ifgreater-e2 e))])
+       (if (and (int? e1) (int? e2))
+           (if (> (int-num e1) (int-num e2)) 
+               (eval-under-env (ifgreater-e3 e) env)
+               (eval-under-env (ifgreater-e4 e) env))
+           (error "ifgreater requires first two params to be ints")))]
+    ;; function call (funexp actual)  env fun nameopt formal body
+    [(call? e)
+     (let ([funexp (eval-under-env (call-funexp e) env)]
+           [arg (eval-under-env (call-actual e) env)])
+       (if (closure? funexp)
+           (let* ([env (closure-env funexp)]
+                  [fn (closure-fun funexp)]
+                  [param (fun-formal fn)]
+                  [body (fun-body fn)])
+             (eval-under-env body (cons (cons param arg) env)))
+           (error "call requires a first argument of a function")))]
+    ;; mlet
+    [(mlet? e)
+     (let ([var (mlet-var e)]
+           [e (mlet-e e)]
+           [body (mlet-body e)])
+       (eval-under-env body (cons (cons var (eval-under-env e env) env))))]
+    ;; pair creation
+    [(apair? e) (apair (eval-under-env (apair-e1 e) env) (eval-under-env (apair-e2 e) env))]
+    ;; fst
+    [(fst? e)
+     (let ([pr (eval-under-env e env)])
+       (if (apair? pr)
+           (apair-e1 pr)
+           (error "fst requires an argument of type apair")))]
+    ;; snd
+    [(snd? e)
+     (let ([pr (eval-under-env e env)])
+       (if (apair? pr)
+           (apair-e2 pr)
+           (error "fst requires an argument of type apair")))]
+    ;; isaunit
+    [(isaunit? e)
+     (let ([e (eval-under-env (isaunit-e e) env)])
+       (if (aunit? e) 
+           (int 1) 
+           (int 0)))]
+    [#t (error (format "bad MUPL expression: ~v" e))]))
 
 ;; Do NOT change
 (define (eval-exp e)
   (eval-under-env e null))
-        
+
 ;; Problem 3
 
 (define (ifaunit e1 e2 e3) "CHANGE")
