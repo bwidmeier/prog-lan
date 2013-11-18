@@ -73,14 +73,14 @@
            (closure e env)))]
     ;; ifgreater
     [(ifgreater? e)
-     (let ([e1 (eval-under-env (ifgreater-e1 e))]
-           [e2 (eval-under-env (ifgreater-e2 e))])
+     (let ([e1 (eval-under-env (ifgreater-e1 e) env)]
+           [e2 (eval-under-env (ifgreater-e2 e) env)])
        (if (and (int? e1) (int? e2))
            (if (> (int-num e1) (int-num e2)) 
                (eval-under-env (ifgreater-e3 e) env)
                (eval-under-env (ifgreater-e4 e) env))
            (error "ifgreater requires first two params to be ints")))]
-    ;; function call (funexp actual)  env fun nameopt formal body
+    ;; function call
     [(call? e)
      (let ([funexp (eval-under-env (call-funexp e) env)]
            [arg (eval-under-env (call-actual e) env)])
@@ -96,7 +96,7 @@
      (let ([var (mlet-var e)]
            [e (mlet-e e)]
            [body (mlet-body e)])
-       (eval-under-env body (cons (cons var (eval-under-env e env) env))))]
+       (eval-under-env body (cons (cons var (eval-under-env e env)) env)))]
     ;; pair creation
     [(apair? e) (apair (eval-under-env (apair-e1 e) env) (eval-under-env (apair-e2 e) env))]
     ;; fst
@@ -125,19 +125,44 @@
 
 ;; Problem 3
 
-(define (ifaunit e1 e2 e3) "CHANGE")
+(define (ifaunit e1 e2 e3) (mlet "x" (isaunit e1) (ifgreater (var "x") (int 0) e2 e3)))
 
-(define (mlet* lstlst e2) "CHANGE")
+(define (mlet* lstlst e2) 
+  (if (null? lstlst)
+      e2
+      (mlet (caar lstlst) (cdar lstlst) (mlet* (cdr lstlst) e2))))
 
-(define (ifeq e1 e2 e3 e4) "CHANGE")
+(define (ifeq e1 e2 e3 e4) 
+  (mlet* 
+   (list (cons "_x" e1) (cons "_y" e2))
+   (ifgreater 
+    (add 
+     (ifgreater (var "_x") (var "_y") (int 1) (int 0)) 
+     (ifgreater (var "_y") (var "_x") (int 1) (int 0))) 
+    (int 0)
+    e4
+    e3)))
+
 
 ;; Problem 4
 
-(define mupl-map "CHANGE")
+(define mupl-map 
+  (fun #f "fn" 
+       (fun "map" "xs" 
+            (ifeq (isaunit (var "xs")) (int 1) 
+                  (aunit) 
+                  (apair 
+                   (call (var "fn") (fst (var "xs"))) 
+                   (call (var "map") (snd (var "xs"))))))))
 
 (define mupl-mapAddN 
   (mlet "map" mupl-map
-        "CHANGE (notice map is now in MUPL scope)"))
+        (fun #f "i" 
+             (fun "mapi" "xs"
+                  (call 
+                   (call (var "map") 
+                         (fun #f "x" (add (var "x") (var "i")))) 
+                   (var "xs"))))))
 
 ;; Challenge Problem
 
