@@ -19,7 +19,7 @@ datatype geom_exp =
 	 | Intersect of geom_exp * geom_exp (* intersection expression *)
 	 | Let of string * geom_exp * geom_exp (* let s = e1 in e2 *)
 	 | Var of string
-(* CHANGE add shifts for expressions of the form Shift(deltaX, deltaY, exp *)
+	 | Shift of real * real * geom_exp
 
 exception BadProgram of string
 exception Impossible of string
@@ -182,6 +182,14 @@ fun intersect (v1,v2) =
          * lines segment have left (or, if vertical, bottom) coordinate first
 *)
 
+fun shift(x, y, expr) =
+    case expr of
+	NoPoints => expr
+      | Point(a, b) => Point(a + x, b + y)
+      | Line(m, b) => Line(m, b + y - m * x)
+      | VerticalLine(x') => VerticalLine(x' + x)
+      | LineSegment(x0, y0, x1, y1) => LineSegment(x0 + x, y0 + y, x1 + x, y1 + y)
+
 fun eval_prog (e,env) =
     case e of
 	NoPoints => e (* first 5 cases are all values, so no computation *)
@@ -195,6 +203,30 @@ fun eval_prog (e,env) =
 	   | SOME (_,v) => v)
       | Let(s,e1,e2) => eval_prog (e2, ((s, eval_prog(e1,env)) :: env))
       | Intersect(e1,e2) => intersect(eval_prog(e1,env), eval_prog(e2, env))
-(* CHANGE: Add a case for Shift expressions *)
+      | Shift(x, y, e) => shift(x, y, eval_prog(e, env))
 
-(* CHANGE: Add function preprocess_prog of type geom_exp -> geom_exp *)
+fun make_segment(x0, y0, x1, y1) =
+    let
+	val equal_xs = real_close(x0, x1)
+	val higher_x = x0 > x1 andalso not equal_xs
+	val equal_ys = real_close(y0, y1)
+	val higher_y = y0 > y1 andalso not equal_ys
+    in
+	if higher_x orelse (equal_xs andalso higher_y)
+	then LineSegment(x1, y1, x0, y0)
+	else if equal_xs andalso equal_ys
+	then Point(x0, y0)
+	else LineSegment(x0, y0, x1, y1)
+    end		 
+
+fun preprocess_prog(expr) =
+    case expr of
+	NoPoints => expr
+      | Point _ => expr 
+      | Line _ => expr 
+      | VerticalLine _ => expr
+      | LineSegment(x0, y0, x1, y1) => make_segment(x0, y0, x1, y1) 
+      | Var _ => expr
+      | Let(s, e0, e1) => Let(s, preprocess_prog(e0), preprocess_prog(e1))
+      | Intersect(e0, e1) => Intersect(preprocess_prog(e0), preprocess_prog(e1))
+      | Shift(x, y, e) => Shift(x, y, preprocess_prog(e))
