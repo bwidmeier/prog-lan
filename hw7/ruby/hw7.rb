@@ -107,8 +107,9 @@ end
 
 
 class Point < GeometryValue
-  # *add* methods to this class -- do *not* change given code and do not
-  # override any methods
+  def shift(dx, dy)
+    Point.new(x + dx, y + dy)
+  end
 
   # Note: You may want a private helper method like the local
   # helper function inbetween in the ML code
@@ -120,8 +121,9 @@ class Point < GeometryValue
 end
 
 class Line < GeometryValue
-  # *add* methods to this class -- do *not* change given code and do not
-  # override any methods
+  def shift(dx, dy)
+    Line.new(m, b + dy - m * dx)
+  end
   attr_reader :m, :b 
   def initialize(m,b)
     @m = m
@@ -130,8 +132,9 @@ class Line < GeometryValue
 end
 
 class VerticalLine < GeometryValue
-  # *add* methods to this class -- do *not* change given code and do not
-  # override any methods
+  def shift(dx, dy)
+    initialize(x + dx)
+  end
   attr_reader :x
   def initialize x
     @x = x
@@ -139,8 +142,9 @@ class VerticalLine < GeometryValue
 end
 
 class LineSegment < GeometryValue
-  # *add* methods to this class -- do *not* change given code and do not
-  # override any methods
+  def shift(dx, dy)
+    LineSegment.new(x1 + dx, y1 + dy, x2 + dx, y2 + dy)
+  end
   # Note: This is the most difficult class.  In the sample solution,
   #  preprocess_prog is about 15 lines long and 
   # intersectWithSegmentAsLineResult is about 40 lines long
@@ -156,8 +160,9 @@ end
 # Note: there is no need for getter methods for the non-value classes
 
 class Intersect < GeometryExpression
-  # *add* methods to this class -- do *not* change given code and do not
-  # override any methods
+  def preprocess_prog
+    Intersect.new(e1.preprocess_prog(), e2.preprocess_prog())
+  end
   def initialize(e1,e2)
     @e1 = e1
     @e2 = e2
@@ -165,9 +170,12 @@ class Intersect < GeometryExpression
 end
 
 class Let < GeometryExpression
-  # *add* methods to this class -- do *not* change given code and do not
-  # override any methods
-  # Note: Look at Var to guide how you implement Let
+  def preprocess_prog
+    Let.new(s, e1.preprocess_prog(), e2.preprocess_prog())
+  end
+  def eval_prog env
+    e2.eval_prog(env + [[s, e1.eval_prog(env)]])
+  end
   def initialize(s,e1,e2)
     @s = s
     @e1 = e1
@@ -176,8 +184,9 @@ class Let < GeometryExpression
 end
 
 class Var < GeometryExpression
-  # *add* methods to this class -- do *not* change given code and do not
-  # override any methods
+  def preprocess_prog
+    self
+  end
   def initialize s
     @s = s
   end
@@ -189,8 +198,12 @@ class Var < GeometryExpression
 end
 
 class Shift < GeometryExpression
-  # *add* methods to this class -- do *not* change given code and do not
-  # override any methods
+  def preprocess_prog
+    Shift.new(dx, dy, e.preprocess_prog)
+  end
+  def eval_prog env
+    e.shift(dx, dy, e.eval_prog(env))
+  end
   def initialize(dx,dy,e)
     @dx = dx
     @dy = dy
