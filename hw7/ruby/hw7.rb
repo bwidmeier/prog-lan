@@ -105,14 +105,32 @@ class NoPoints < GeometryValue
   end
 end
 
-
 class Point < GeometryValue
   def shift(dx, dy)
     Point.new(x + dx, y + dy)
   end
 
-  # Note: You may want a private helper method like the local
-  # helper function inbetween in the ML code
+  def intersect other
+    other.intersectPoint self
+  end
+  def intersectPoint p
+    raise "Not Implemented"
+  end
+  def intersectLine line
+    raise "Not Implemented"
+  end
+  def intersectVerticalLine vline
+    raise "Not Implemented"
+  end
+  def intersectWithSegmentAsLineResult seg
+    raise "Not Implemented"
+  end
+
+  # may want helper function like
+  # fun inbetween(v,end1,end2) =
+  # (end1 - epsilon <= v andalso v <= end2 + epsilon)
+  # orelse (end2 - epsilon <= v andalso v <= end1 + epsilon)
+
   attr_reader :x, :y
   def initialize(x,y)
     @x = x
@@ -121,6 +139,22 @@ class Point < GeometryValue
 end
 
 class Line < GeometryValue
+  def intersect other
+    other.intersectLine self
+  end
+  def intersectPoint p
+    raise "Not Implemented"
+  end
+  def intersectLine line
+    raise "Not Implemented"
+  end
+  def intersectVerticalLine vline
+    raise "Not Implemented"
+  end
+  def intersectWithSegmentAsLineResult seg
+    raise "Not Implemented"
+  end  
+  
   def shift(dx, dy)
     Line.new(m, b + dy - m * dx)
   end
@@ -132,6 +166,22 @@ class Line < GeometryValue
 end
 
 class VerticalLine < GeometryValue
+  def intersect other
+    other.intersectVerticalLine self
+  end
+  def intersectPoint p
+    raise "Not Implemented"
+  end
+  def intersectLine line
+    raise "Not Implemented"
+  end
+  def intersectVerticalLine vline
+    raise "Not Implemented"
+  end
+  def intersectWithSegmentAsLineResult seg
+    raise "Not Implemented"
+  end
+
   def shift(dx, dy)
     initialize(x + dx)
   end
@@ -142,6 +192,22 @@ class VerticalLine < GeometryValue
 end
 
 class LineSegment < GeometryValue
+  def intersect other
+    other.intersectLineSegment self
+  end
+  def intersectPoint p
+    raise "Not Implemented"
+  end
+  def intersectLine line
+    raise "Not Implemented"
+  end
+  def intersectVerticalLine vline
+    raise "Not Implemented"
+  end
+  def intersectWithSegmentAsLineResult seg
+    raise "Not Implemented"
+  end  
+
   def shift(dx, dy)
     LineSegment.new(x1 + dx, y1 + dy, x2 + dx, y2 + dy)
   end
@@ -162,6 +228,9 @@ end
 class Intersect < GeometryExpression
   def preprocess_prog
     Intersect.new(e1.preprocess_prog(), e2.preprocess_prog())
+  end
+  def eval_prog env
+    e1.eval_prog().intersect(e2.eval_prog())
   end
   def initialize(e1,e2)
     @e1 = e1
