@@ -106,6 +106,13 @@ class NoPoints < GeometryValue
 end
 
 class Point < GeometryValue
+  def eval_prog env 
+    self
+  end
+  def preprocess_prog
+    self
+  end
+
   def shift(dx, dy)
     Point.new(x + dx, y + dy)
   end
@@ -113,19 +120,40 @@ class Point < GeometryValue
   def intersect other
     other.intersectPoint self
   end
+
   def intersectPoint p
-    raise "Not Implemented"
+    if real_close_point(p.x, p.y, x, y)
+      self
+    else
+      NoPoints.new
+    end
   end
   def intersectLine line
-    raise "Not Implemented"
+    if real_close(y, line.m * x + line.b)
+      self
+    else
+      NoPoints.new
+    end
   end
   def intersectVerticalLine vline
-    raise "Not Implemented"
+    if real_close(x, vline.x)
+      self
+    else
+      NoPoints.new
+    end
   end
   def intersectWithSegmentAsLineResult seg
-    raise "Not Implemented"
+    if inbetween(x, seg.x1, seg.x2) and inbetween(y, seg.y1, seg.y2)
+      self
+    else
+      NoPoints.new
+    end
   end
-
+  
+  def inbetween(v, end1, end2)
+    (end1 - GeometryExpression::Epsilon <= v and v <= end2 + GeometryExpression::Epsilon) or
+      (end2 - GeometryExpression::Epsilon <= v and v <= end1 + GeometryExpression::Epsilon)
+  end
   # may want helper function like
   # fun inbetween(v,end1,end2) =
   # (end1 - epsilon <= v andalso v <= end2 + epsilon)
@@ -139,20 +167,37 @@ class Point < GeometryValue
 end
 
 class Line < GeometryValue
+  def eval_prog env 
+    self
+  end
+  def preprocess_prog
+    self
+  end
+
   def intersect other
     other.intersectLine self
   end
   def intersectPoint p
-    raise "Not Implemented"
+    p.intersectLine self
   end
   def intersectLine line
-    raise "Not Implemented"
+    if real_close(m, line.m)
+      if real_close(b, line.b)
+        self
+      else
+        NoPoints.new
+      end
+    else
+      x = (b - line.b) / (line.m - m)
+      y = line.m * x + line.b
+      Point.new(x, y)
+    end
   end
   def intersectVerticalLine vline
-    raise "Not Implemented"
+    Point.new(vline.x, m * vline.x + b)
   end
   def intersectWithSegmentAsLineResult seg
-    raise "Not Implemented"
+    seg
   end  
   
   def shift(dx, dy)
@@ -166,20 +211,31 @@ class Line < GeometryValue
 end
 
 class VerticalLine < GeometryValue
+   def eval_prog env 
+    self
+  end
+  def preprocess_prog
+    self
+  end
+
   def intersect other
     other.intersectVerticalLine self
   end
   def intersectPoint p
-    raise "Not Implemented"
+    p.intersectVerticalLine self
   end
   def intersectLine line
-    raise "Not Implemented"
+    line.intersectVerticalLine self
   end
   def intersectVerticalLine vline
-    raise "Not Implemented"
+    if real_close(x, vline.x)
+      self
+    else
+      NoPoints.new
+    end
   end
   def intersectWithSegmentAsLineResult seg
-    raise "Not Implemented"
+    seg
   end
 
   def shift(dx, dy)
@@ -192,20 +248,82 @@ class VerticalLine < GeometryValue
 end
 
 class LineSegment < GeometryValue
+  def eval_prog env 
+    self
+  end
+  def preprocess_prog
+    equal_xs = real_close(x1, x2)
+    higher_x = x1 > x2 and not equal_xs
+    equal_ys = real_close(y1, y2)
+    higher_y = y1 > y2 and not equal_ys
+    
+    if higher_x or (equal_xs and higher_y)
+      LineSegment.new(x2, y2, x1, x2)
+    else 
+      if equal_xs and equal_ys
+        Point.new(x1, y1)
+      else
+        self
+      end
+    end
+  end  
+
   def intersect other
     other.intersectLineSegment self
   end
   def intersectPoint p
-    raise "Not Implemented"
+    p.intersectLineSegment self
   end
   def intersectLine line
-    raise "Not Implemented"
+    line.intersectLineSegment self
   end
   def intersectVerticalLine vline
-    raise "Not Implemented"
+    vline.intersectLineSegment self
   end
   def intersectWithSegmentAsLineResult seg
-    raise "Not Implemented"
+    if real_close(x1, x2)
+      if y1 < seg.y1
+        seg_a = self
+        seg_b = seg
+      else
+        seg_a = seg
+        seg_b = self
+      end
+      if real_close(seg_a.y2, seg_b.y1)
+        Point.new(seg_a.x2, seg_a.y2)
+      else
+        if seg_a.y2 < seg_b.y1
+          NoPoints.new
+        else
+          if seg_a.y2 > seg_b.y2
+            seg_b
+          else
+            LineSegment.new(seg_b.x1, seg_b.y1, seg_a.x2, seg_a.y2)
+          end
+        end
+      end
+    else
+      if y1 < seg.y1
+        seg_a = self
+        seg_b = seg
+      else
+        seg_a = seg
+        seg_b = self
+      end
+      if real_close(seg_a.x2, seg_b.x1)
+        Point.new(seg_a.x2, seg_a.y2)
+      else
+        if seg_a.x2 < seg_b.x1
+          NoPoints.new
+        else
+          if seg_a.x2 > seg_b.x2
+            seg_b
+          else
+            LineSegment.new(seg_b.x1, seg_b.y1, seg_a.x2, seg_a.y2)
+          end
+        end
+      end
+    end
   end  
 
   def shift(dx, dy)
