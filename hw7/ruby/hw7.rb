@@ -154,10 +154,6 @@ class Point < GeometryValue
     (end1 - GeometryExpression::Epsilon <= v and v <= end2 + GeometryExpression::Epsilon) or
       (end2 - GeometryExpression::Epsilon <= v and v <= end1 + GeometryExpression::Epsilon)
   end
-  # may want helper function like
-  # fun inbetween(v,end1,end2) =
-  # (end1 - epsilon <= v andalso v <= end2 + epsilon)
-  # orelse (end2 - epsilon <= v andalso v <= end1 + epsilon)
 
   attr_reader :x, :y
   def initialize(x,y)
@@ -239,7 +235,7 @@ class VerticalLine < GeometryValue
   end
 
   def shift(dx, dy)
-    initialize(x + dx)
+    VerticalLine.new(x + dx)
   end
   attr_reader :x
   def initialize x
@@ -253,12 +249,12 @@ class LineSegment < GeometryValue
   end
   def preprocess_prog
     equal_xs = real_close(x1, x2)
-    higher_x = x1 > x2 and not equal_xs
+    higher_x = (x1 > x2 and not equal_xs)
     equal_ys = real_close(y1, y2)
-    higher_y = y1 > y2 and not equal_ys
+    higher_y = (y1 > y2 and not equal_ys)
     
     if higher_x or (equal_xs and higher_y)
-      LineSegment.new(x2, y2, x1, x2)
+      LineSegment.new(x2, y2, x1, y1)
     else 
       if equal_xs and equal_ys
         Point.new(x1, y1)
@@ -329,9 +325,7 @@ class LineSegment < GeometryValue
   def shift(dx, dy)
     LineSegment.new(x1 + dx, y1 + dy, x2 + dx, y2 + dy)
   end
-  # Note: This is the most difficult class.  In the sample solution,
-  #  preprocess_prog is about 15 lines long and 
-  # intersectWithSegmentAsLineResult is about 40 lines long
+
   attr_reader :x1, :y1, :x2, :y2
   def initialize (x1,y1,x2,y2)
     @x1 = x1
@@ -341,14 +335,12 @@ class LineSegment < GeometryValue
   end
 end
 
-# Note: there is no need for getter methods for the non-value classes
-
 class Intersect < GeometryExpression
   def preprocess_prog
-    Intersect.new(e1.preprocess_prog(), e2.preprocess_prog())
+    Intersect.new(@e1.preprocess_prog, @e2.preprocess_prog)
   end
   def eval_prog env
-    e1.eval_prog().intersect(e2.eval_prog())
+    @e1.eval_prog(env).intersect(@e2.eval_prog(env))
   end
   def initialize(e1,e2)
     @e1 = e1
@@ -358,10 +350,10 @@ end
 
 class Let < GeometryExpression
   def preprocess_prog
-    Let.new(s, e1.preprocess_prog(), e2.preprocess_prog())
+    Let.new(@s, @e1.preprocess_prog, @e2.preprocess_prog)
   end
   def eval_prog env
-    e2.eval_prog(env + [[s, e1.eval_prog(env)]])
+    @e2.eval_prog([[@s, @e1.eval_prog(env)]] + env)
   end
   def initialize(s,e1,e2)
     @s = s
@@ -377,7 +369,7 @@ class Var < GeometryExpression
   def initialize s
     @s = s
   end
-  def eval_prog env # remember: do not change this method
+  def eval_prog env
     pr = env.assoc @s
     raise "undefined variable" if pr.nil?
     pr[1]
@@ -386,10 +378,10 @@ end
 
 class Shift < GeometryExpression
   def preprocess_prog
-    Shift.new(dx, dy, e.preprocess_prog)
+    Shift.new(@dx, @dy, @e.preprocess_prog)
   end
   def eval_prog env
-    e.shift(dx, dy, e.eval_prog(env))
+    @e.eval_prog(env).shift(@dx, @dy)
   end
   def initialize(dx,dy,e)
     @dx = dx
